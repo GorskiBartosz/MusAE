@@ -32,12 +32,13 @@ model_params = {
 	"name": "MusAE_4_Intel"
 }
 
-preprocessing = False
+preprocessing = True
 learning_rate = 1e-5 #K.variable(1e-4)
 
 preprocessing_params = {
 	"prep_batch_size": 128,
-	"prep_dataset_name": ""
+	"prep_dataset_path": "./dataset_16bar_intel/",
+	"early_exit": 256
 }
 
 training_params = {
@@ -61,7 +62,7 @@ midi_params = {
 	"n_midi_programs": 128,  	# constant for MIDI
 	"max_velocity": 127.,    	# constant for MIDI
 	"velocity_threshold": 0.5, 	# velocity_threshold_such_that_it_is_a_played_note
-	"phrase_size": 4*4*16,		# beat resolution * beat in bar * bar in low phrase * number of low phases 	
+	"phrase_size": 4*4*16,		# beat resolution * beat in bar * bar in low phrase * number of low phases
 	"subphrase_size": 4*4*1,	# beat resolution * beat in bar * bar in low phrase
 	"bar_size": 4*4, 			# beat resolution * beat in bar
 	"beat_resolution": 4,
@@ -253,4 +254,3 @@ instrument_category_names = [
 	'percussive',
 	'sound effects',
 ]
-
