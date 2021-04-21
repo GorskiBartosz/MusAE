@@ -32,7 +32,7 @@ model_params = {
 	"name": "MusAE_4_Intel"
 }
 
-preprocessing = True
+preprocessing = False
 learning_rate = 1e-5 #K.variable(1e-4)
 
 preprocessing_params = {
