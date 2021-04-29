@@ -167,12 +167,14 @@ class MidiDataset():
 		bar = progressbar.ProgressBar(max_value=n_of_batches)
 
 		meta_link = json.load(open(os.path.join(self.dataset_path, "meta_link.json")))
-		pool = Pool(7)
+		pool = Pool(10)
 		for i in range(n_of_batches):
 			bar.update(i)
 			source = dataset[i, :]
 			#create_batch(self, i, source, meta_link, pianorolls_path, batch_path)
 			pool.apply_async(create_batch, args=(self, i, source, meta_link, pianorolls_path, batch_path, ))
+		pool.close()
+		pool.join()
 
 	def preprocess(self, X):
 		# if silent timestep (all 0), then set silent note to 1, else set
