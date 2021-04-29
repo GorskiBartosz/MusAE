@@ -14,7 +14,7 @@ from keras.optimizers import RMSprop, Adam
 from functools import partial
 
 from keras.utils import print_summary, plot_model
-from keras.utils import to_categorical   
+from keras.utils import to_categorical
 
 from keras import backend as K
 from keras.engine.topology import Layer
@@ -108,7 +108,7 @@ class MusAE_GM():
 
 		z_real = Input(shape=(self.z_length,), name="z_reg")
 		z_fake = self.encoder(X)
-		
+
 		z_int = RandomWeightedAverage(name="weighted_avg_z")([z_real, z_fake])
 
 		z_valid_real = self.z_discriminator([z_real, y])
@@ -121,7 +121,7 @@ class MusAE_GM():
 			name="z_regularisation_phase"
 		)
 		plot_model(self.z_regularisation_phase, os.path.join(path, "z_regularisation_phase.png"), show_shapes=True)
-		
+
 		#-------------------------------
 		# Construct Computational Graph
 		# for the generator (encoder)
@@ -171,7 +171,7 @@ class MusAE_GM():
 			],
 			name="adversarial_autoencoder"
 		)
-		
+
 		self.z_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=z_int)
 		self.z_gp_loss.__name__ = "gradient_penalty_z"
 
@@ -202,12 +202,12 @@ class MusAE_GM():
 		n = self.s_length + 1
 		for l in range(self.s_length+1):
 			self.prior_mean[l] = [1 * np.cos((l*2*np.pi) / n), 1 * np.sin((l*2*np.pi) / n)] + [ 0 for _ in range(self.z_length-2) ]
-		
+
 			v1 = [np.cos((l*2*np.pi) / n), np.sin((l*2*np.pi) / n)]
 			v2 = [-np.sin((l*2*np.pi) / n), np.cos((l*2*np.pi) / n)]
-			
+
 			a1 = .1   # radial axis (center-to-outer)
-			a2 = .001 # tangent axis (along the circle)  
+			a2 = .001 # tangent axis (along the circle)
 
 			M = np.eye(self.z_length)
 			S = np.eye(self.z_length)
@@ -223,7 +223,7 @@ class MusAE_GM():
 		ids = map(lambda gpu: int(gpu.entry['index']), stats)
 		ratios = map(lambda gpu: float(gpu.entry['memory.used']) / float(gpu.entry['memory.total']), stats)
 		bestGPU = min(zip(ids, ratios), key=lambda x: x[1])[0]
-	 
+
 		print("Setting GPU to: {}".format(bestGPU))
 		os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 		os.environ['CUDA_VISIBLE_DEVICES'] = str(bestGPU)
@@ -245,17 +245,17 @@ class MusAE_GM():
 		return wrapper
 
 	def precision(self, y_true, y_pred):
-		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))  
-		# predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))  
-		# precision = true_positives / (predicted_positives + K.epsilon())    
+		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+		# predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+		# precision = true_positives / (predicted_positives + K.epsilon())
 		# return precision
 		precision = self.as_keras_metric(tf.metrics.precision)
 		return precision(y_true, y_pred)
 
 	def recall(self, y_true, y_pred):
-		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))  
-		# possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))   
-		# recall = true_positives / (possible_positives + K.epsilon())    
+		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+		# possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+		# recall = true_positives / (possible_positives + K.epsilon())
 		recall = self.as_keras_metric(tf.metrics.recall)
 		return recall(y_true, y_pred)
 
@@ -299,7 +299,7 @@ class MusAE_GM():
 		for key in paths:
 			if not os.path.exists(paths[key]):
 				os.makedirs(paths[key])
-		
+
 		print("Splitting dataset...")
 		batches_path = os.path.join(self.dataset_path, "batches", "X")
 		_, _, files = next(os.walk(batches_path))
@@ -330,7 +330,7 @@ class MusAE_GM():
 			"z_gradient_penalty": [],
 			"gen_score": []
 		}
-		
+
 		vl_log = {
 			"epoch": [],
 			"VL_AE_accuracy_drums": [],
@@ -371,7 +371,7 @@ class MusAE_GM():
 			# train on the training set
 			for _ in range(self.len_tr_set):
 				bar.update(pbc)
-				
+
 				X, Y, label = tr_queue.get(block=True)
 				label = label[:, :self.s_length]
 
@@ -411,7 +411,7 @@ class MusAE_GM():
 				tr_log["AE_accuracy_guitar"].append(aae_loss[13])
 				tr_log["AE_accuracy_strings"].append(aae_loss[15])
 				tr_log["AE_accuracy_tot"].append(np.array([aae_loss[9], aae_loss[11], aae_loss[13], aae_loss[15]]).mean())
-				
+
 				tr_log["z_score_real"].append(aae_loss[18])
 				tr_log["z_score_fake"].append(aae_loss[20])
 				tr_log["z_gradient_penalty"].append(aae_loss[22])
@@ -511,7 +511,7 @@ class MusAE_GM():
 			vl_log["VL_AE_accuracy_guitar"].append(np.array(vl_log_tmp["VL_AE_accuracy_guitar"]).mean())
 			vl_log["VL_AE_accuracy_strings"].append(np.array(vl_log_tmp["VL_AE_accuracy_strings"]).mean())
 			vl_log["VL_AE_accuracy_tot"].append(np.array([ vl_log["VL_AE_accuracy_drums"], vl_log["VL_AE_accuracy_bass"], vl_log["VL_AE_accuracy_guitar"], vl_log["VL_AE_accuracy_strings"] ]).mean())
-			
+
 			with open(os.path.join(paths["plots"], "log.json"), 'w') as f:
 				json.dump(str(vl_log), f)
 
@@ -531,7 +531,7 @@ class MusAE_GM():
 			if m:
 				choice = np.random.choice(m)
 				new_l[choice] = 1
-			
+
 			result.append(new_l)
 
 		return np.array(result)
@@ -539,7 +539,7 @@ class MusAE_GM():
 	# sample from a "flower-shaped" mixture of gaussian (such as the AAE paper)
 	def sample_mixture_of_gaussian(self, n, labels):
 		vectors = []
-		
+
 		for index, y in enumerate(labels):
 			if not np.any(y):
 				l = n-1
@@ -560,10 +560,9 @@ class MusAE_GM():
 			plt.plot(xs, ys)
 			plt.xlabel('iteration')
 			plt.ylabel(key)
-			
+
 			plt.savefig(os.path.join(path, key))
 
 	def save_checkpoint(self, path, epoch):
 		self.encoder.save_weights(os.path.join(path, str(epoch) + "_MusAE_encoder.h5"))
 		self.decoder.save_weights(os.path.join(path, str(epoch) + "_MusAE_decoder.h5"))
-

@@ -16,6 +16,31 @@ import pprint
 import itertools
 from keras.utils import to_categorical
 from collections import Counter
+from multiprocessing import Pool
+
+def create_batch(self, i, source, meta_link, pianorolls_path, batch_path):
+	dest = []
+	labels = []
+	# for each pianoroll, store it and the corresponding labels
+	for sample in source:
+		multitrack = pproll.load(os.path.join(pianorolls_path, sample))
+		proll = multitrack.get_stacked_pianoroll()
+		dest.append(proll)
+
+		# retrieve corresponding s factors
+		sample_id = sample.split(".")[0]
+		song_id = meta_link[sample_id]
+		label = np.load(os.path.join(self.dataset_path, "labels", str(song_id) + ".npy"))
+		labels.append(label)
+	dest = np.array(dest)
+	labels = np.array(labels)
+	# preprocess batch, get X and Y
+	X, Y = self.preprocess(dest)
+	# store everything
+	np.save(os.path.join(batch_path, "X", str(i) + ".npy"), X)
+	np.save(os.path.join(batch_path, "Y", str(i) + ".npy"), Y)
+	np.save(os.path.join(batch_path, "labels", str(i) + ".npy"), labels)
+	print("batch - end: "+str(i))
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -43,14 +68,14 @@ class MidiDataset():
 		pianoroll = pproll.load(os.path.join(self.dataset_path + "pianorolls/" + str(idx) + ".npz"))
 		return pianoroll
 
-	def get_programs(self, song):	
+	def get_programs(self, song):
 		programs = np.array([ track.program for track in song.tracks ])
 		return programs
-	
+
 	# I shape: (n_midi_programs, n_tracks)
-	def programs_to_instrument_matrix(self, programs):    
+	def programs_to_instrument_matrix(self, programs):
 		assert(len(programs) == self.n_tracks)
-		
+
 		I = np.zeros((self.n_midi_programs, self.n_tracks))
 		for i, program in enumerate(programs):
 			I[program, i] = 1
@@ -65,7 +90,7 @@ class MidiDataset():
 		programs = [ np.argmax(I[:, i]) for i in range(I.shape[1]) ]
 
 		return np.array(programs)
-	
+
 	def retrieve_metadata(self, path):
 		with open(path, "r") as fp:
 			metadata = json.load(fp)
@@ -77,16 +102,16 @@ class MidiDataset():
 		song_id = meta_link[idx]
 		return self.retrieve_metadata(os.path.join(self.dataset_path, "metadata/", str(song_id) + ".json"))
 
-	def retrieve_instrument_matrix(self, path):	
+	def retrieve_instrument_matrix(self, path):
 		I = np.load(path)
 		return I
 
 	def generate_batches(self, path, filenames, batch_size):
 		print("Generating batches from data...")
 		dataset_len = len(filenames)
-		# shuffle samples 
+		# shuffle samples
 		random.shuffle(filenames)
-		
+
 		# discard filenames
 		remainder = dataset_len % batch_size
 		dataset = np.array(filenames[:-remainder])
@@ -121,7 +146,7 @@ class MidiDataset():
 		metadata_path = os.path.join(self.dataset_path, "metadata/")
 
 		_, _, files = next(os.walk(pianorolls_path))
-		
+
 		dataset_len = len(files)
 
 		random.shuffle(files)
@@ -142,43 +167,24 @@ class MidiDataset():
 		bar = progressbar.ProgressBar(max_value=n_of_batches)
 
 		meta_link = json.load(open(os.path.join(self.dataset_path, "meta_link.json")))
+		pool = Pool(7)
 		for i in range(n_of_batches):
 			bar.update(i)
 			source = dataset[i, :]
-			dest = []
-			labels = []
-			# for each pianoroll, store it and the corresponding labels
-			for sample in source:
-				multitrack = pproll.load(os.path.join(pianorolls_path, sample))
-				proll = multitrack.get_stacked_pianoroll()
-				dest.append(proll)
-
-				# retrieve corresponding s factors
-				sample_id = sample.split(".")[0]
-				song_id = meta_link[sample_id]
-				label = np.load(os.path.join(self.dataset_path, "labels", str(song_id) + ".npy"))
-				labels.append(label)
-
-			dest = np.array(dest)
-			labels = np.array(labels)
-			# preprocess batch, get X and Y
-			X, Y = self.preprocess(dest)
-			# store everything
-			np.save(os.path.join(batch_path, "X", str(i) + ".npy"), X)
-			np.save(os.path.join(batch_path, "Y", str(i) + ".npy"), Y)
-			np.save(os.path.join(batch_path, "labels", str(i) + ".npy"), labels)
+			#create_batch(self, i, source, meta_link, pianorolls_path, batch_path)
+			pool.apply_async(create_batch, args=(self, i, source, meta_link, pianorolls_path, batch_path, ))
 
 	def preprocess(self, X):
 		# if silent timestep (all 0), then set silent note to 1, else set
 		# silent note to 0
-		def pad_with(vector, pad_width, iaxis, kwargs):			
+		def pad_with(vector, pad_width, iaxis, kwargs):
 			# if no padding, skip directly
 			if pad_width[0] == 0 and pad_width[1] == 0:
 				return vector
 			else:
 
 				if all(vector[pad_width[0]:-pad_width[1]] == 0):
-					
+
 					pad_value = 1
 				else:
 					pad_value = 0
@@ -198,9 +204,9 @@ class MidiDataset():
 			X_t = np.expand_dims(X_t, axis=-1)
 
 			tracks.append(X_t)
-		
+
 		X = np.concatenate(tracks, axis=-1)
-		
+
 		# adding held note
 		for sample in range(X.shape[0]):
 			for ts in range(1, X.shape[1]):
@@ -228,14 +234,14 @@ class MidiDataset():
 		#putting tracks back toghether
 		batch_size = X_drums.shape[0]
 		n_timesteps = X_drums.shape[1]
-		
+
 		# converting softmax outputs to categorical
 		tracks = []
 		for track in [X_drums, X_bass, X_guitar, X_strings]:
 			track = to_categorical(track.argmax(2), num_classes=self.n_cropped_notes)
 			track = np.expand_dims(track, axis=-1)
 			tracks.append(track)
-		
+
 		X = np.concatenate(tracks, axis=-1)
 
 		# copying previous timestep if held note is on
@@ -303,7 +309,7 @@ class MidiDataset():
 		pbc = 0
 		yeah = 0
 		fetch_meta = {} # in this dict I will store the id of the corresponding metadata file
-		max_bar_silence = 0 
+		max_bar_silence = 0
 
 		for path, subdirs, files in os.walk(pianorolls_folder):
 			for file in files:
@@ -312,7 +318,7 @@ class MidiDataset():
 				msd_id = path.split("/")[-1]
 				filename = file.split(".")[0]
 
-				
+
 				if early_exit != None and pbc > early_exit:
 					return
 
@@ -326,7 +332,7 @@ class MidiDataset():
 					continue
 
 				del pm_song # don't need pretty midi object anymore, now i need pianorolls
-				
+
 				try:
 					base_song = pproll.parse(os.path.join(path, file), beat_resolution=4)
 				except Exception:
@@ -342,10 +348,10 @@ class MidiDataset():
 
 				#if string_tracks:
 				base_song.merge_tracks(string_tracks, mode="max", program=48, name="Strings", remove_merged=True)
-				
+
 				# merging tracks change order of them, need to re-find the new index of Trio track
 				guitar_tracks, bass_tracks, drums_tracks, string_tracks = self.get_guitar_bass_drums(base_song)
-				
+
 				# take all possible combination of guitar, bass and drums
 				for guitar_track in guitar_tracks:
 					for bass_track in bass_tracks:
@@ -375,7 +381,7 @@ class MidiDataset():
 							# Test 1: check whether a track is silent during all the song
 							if song.get_empty_tracks():
 								continue
-							
+
 							pianoroll = song.get_stacked_pianoroll()
 
 							i = 0
@@ -393,7 +399,7 @@ class MidiDataset():
 											bar_of_silences[track] += 1
 
 										j += 1#self.bar_size
-								
+
 								# if the phrase is good, let's store it
 								if not any(bar_of_silences > max_bar_silence):
 									# data augmentation, random transpose bar
@@ -429,7 +435,7 @@ class MidiDataset():
 					base_song.pad_to_multiple(self.phrase_size)
 					base_song.pad_to_same()
 					base_song.save(os.path.join(songs_path, str(pbc) + ".npz"))
-					
+
 					# fetching corresponding metadata from Million song dataset
 					with tables.open_file(msd_id_to_h5(msd_id)) as h5:
 						title = str(h5.root.metadata.songs.cols.title[0], "utf-8")
@@ -452,7 +458,7 @@ class MidiDataset():
 
 				del base_song
 				bar.update(pbc)
-			
+
 		print("pbc:", pbc)
 		print("yeah:", yeah)
 
@@ -490,9 +496,9 @@ class MidiDataset():
 		pbc = 0
 		yeah = 0
 		fetch_meta = {} # in this dict I will store the id of the corresponding metadata file
-		max_bar_silence = 0 
+		max_bar_silence = 0
 
-		with open(os.path.join(self.dataset_path, "song_names.txt"), "a") as song_names_fp: 
+		with open(os.path.join(self.dataset_path, "song_names.txt"), "a") as song_names_fp:
 			for path, subdirs, files in os.walk(pianorolls_folder):
 				for file in files:
 					store_meta = False
@@ -514,7 +520,7 @@ class MidiDataset():
 						continue
 
 					del pm_song # don't need pretty midi object anymore, now i need pianorolls
-					
+
 					try:
 						base_song = pproll.parse(os.path.join(path, file), beat_resolution=4)
 					except Exception:
@@ -530,7 +536,7 @@ class MidiDataset():
 
 					#if string_tracks:
 					base_song.merge_tracks(string_tracks, mode="max", program=48, name="Strings", remove_merged=True)
-					
+
 					# merging tracks change order of them, need to re-find the new index of Trio track
 					guitar_tracks, bass_tracks, drums_tracks, string_tracks = self.get_guitar_bass_drums(base_song)
 
@@ -577,7 +583,7 @@ class MidiDataset():
 												bar_of_silences[track] += 1
 
 											j += 1#self.bar_size
-									
+
 									# if the phrase is good, let's store it
 									#print(bar_of_silences)
 									if not any(bar_of_silences > max_bar_silence):
@@ -629,17 +635,17 @@ class MidiDataset():
 				with open(os.path.join(dataset_path, "metadata", song_number + ".json")) as metadata_fp:
 					metadata = json.load(metadata_fp)
 
-				counter.update(metadata["genres"])				
+				counter.update(metadata["genres"])
 				bar.update(pbc)
 
 		print("Genres found:")
 		pp.pprint(counter.most_common(max_genres))
-		
+
 		with open(os.path.join(dataset_path, "genre_counter.json"), "w") as fp:
 			json.dump(counter.most_common(max_genres), fp)
 
 		genres_list = [ x[0] for x in list(counter.most_common(max_genres)) ]
-		
+
 		if not os.path.exists(os.path.join(dataset_path, "labels")):
 			os.makedirs(os.path.join(dataset_path, "labels"))
 

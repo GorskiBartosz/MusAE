@@ -32,13 +32,13 @@ model_params = {
 	"name": "MusAE_4_Intel"
 }
 
-preprocessing = False
+preprocessing = True
 learning_rate = 1e-5 #K.variable(1e-4)
 
 preprocessing_params = {
 	"prep_batch_size": 128,
-	"prep_dataset_path": "./dataset_16bar_intel/",
-	"early_exit": 256
+	"prep_dataset_path": "./dataset_16bar_intel_full/",
+	"early_exit": None
 }
 
 training_params = {
@@ -73,7 +73,7 @@ general_params = {
 	"checkpoints_path": "./out/checkpoints/",
 	"plots_path": "./out/plots",
 	"preprocessed_midi_path": "./preprocessed_midi/",
-	"dataset_path": "./dataset_16bar_intel/",
+	"dataset_path": "./dataset_16bar_intel_full/",
 	"autoencoded_path": "./out/autoencoded/",
 	"interpolations_path": "./out/interpolation/",
 	"sampled_path": "./out/sampled/",
