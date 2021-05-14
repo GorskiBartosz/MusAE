@@ -36,13 +36,13 @@ preprocessing = False
 learning_rate = 1e-5 #K.variable(1e-4)
 
 preprocessing_params = {
-	"prep_batch_size": 128,
+	"prep_batch_size": 64,
 	"prep_dataset_path": "./dataset_16bar_intel/",
 	"early_exit": 256
 }
 
 training_params = {
-	"batch_size": 16,
+	"batch_size": 8,
 	"test_size": 0.2,
 	"k_discriminator": 1,
 	"n_epochs": 100,

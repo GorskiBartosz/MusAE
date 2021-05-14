@@ -4,4 +4,6 @@ RUN apt-get update && apt-get install wget
 RUN wget https://repo.anaconda.com/archive/Anaconda3-2020.11-Linux-x86_64.sh
 RUN chmod a=rwx Anaconda3-2020.11-Linux-x86_64.sh
 RUN ./Anaconda3-2020.11-Linux-x86_64.sh -b
-COPY musae.txt /
+COPY . /MusAE
+RUN root/anaconda3/bin/conda init
+RUN bash -c 'conda env create -f /MusAE/musae.yml'
