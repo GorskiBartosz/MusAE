@@ -420,7 +420,7 @@ class MusAE_GM():
 				if pbc_tr % 500 == 0:
 					print("\nPlotting stats...")
 					#print("Regularisation weight:", K.get_value(self.regularisation_weight))
-					#self.plot(paths["plots"], tr_log)
+					self.plot(paths["plots"], tr_log)
 					print("TR batches in the queue: ", tr_queue.qsize())
 
 				if pbc_tr % 5000 == 0:
@@ -515,7 +515,7 @@ class MusAE_GM():
 			with open(os.path.join(paths["plots"], "log.json"), 'w') as f:
 				json.dump(str(vl_log), f)
 
-			#self.plot(paths["plots"], vl_log)
+			self.plot(paths["plots"], vl_log)
 
 
 	def from_khot_to_1hot(self, labels):

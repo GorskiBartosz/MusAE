@@ -36,16 +36,16 @@ preprocessing = False
 learning_rate = 1e-5 #K.variable(1e-4)
 
 preprocessing_params = {
-	"prep_batch_size": 64,
+	"prep_batch_size": 128,
 	"prep_dataset_path": "./dataset_16bar_intel/",
 	"early_exit": 256
 }
 
 training_params = {
-	"batch_size": 8,
+	"batch_size": 32,
 	"test_size": 0.2,
 	"k_discriminator": 1,
-	"n_epochs": 100,
+	"n_epochs": 10,
 	"z_lambda": 10, 	# weight of gradient penalty loss
 	"s_lambda": 10, 	# weight of gradient penalty loss
 	"aae_optim": Adam(learning_rate, clipnorm=1., clipvalue=.5), # decay=1e-4),

@@ -167,7 +167,7 @@ class MidiDataset():
 		bar = progressbar.ProgressBar(max_value=n_of_batches)
 
 		meta_link = json.load(open(os.path.join(self.dataset_path, "meta_link.json")))
-		pool = Pool(10)
+		pool = Pool(14)
 		for i in range(n_of_batches):
 			bar.update(i)
 			source = dataset[i, :]
