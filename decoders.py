@@ -1,6 +1,6 @@
 from keras.layers import Concatenate, RepeatVector, TimeDistributed, Reshape, Permute
 from keras.layers import Add, Lambda, Flatten, BatchNormalization, Activation
-from keras.layers import Input, LSTM, Dense, GRU, Bidirectional, CuDNNLSTM
+from keras.layers import Input, LSTM, Dense, GRU, Bidirectional
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.models import Model
@@ -23,25 +23,25 @@ def build_decoder_z_flat():
 	latent = z
 
 	init_state = Dense(X_high_size, activation="tanh", name="hidden_state_init")(latent)
-	
+
 	out_X = []
 	for t in range(n_tracks):
 		h_X = RepeatVector(phrase_size, name=f"latent_repeat_{t}")(latent)
 		for l in range(X_high_depth):
-			h_X = CuDNNLSTM(
+			h_X = LSTM(
 				X_high_size,
 				return_sequences=True,
 				#activation="tanh",
 				name=f"high_encoder_{t}_{l}"
 			)(h_X, initial_state=[init_state, init_state])
-		
+
 		out_X_t = TimeDistributed(
 			Dense(n_cropped_notes, activation="softmax", name=f"project_out_{t}"),
 			name=f"ts_project_{t}"
 		)(h_X)
 
 		out_X.append(out_X_t)
-	
+
 	decoder_outputs = out_X
 	return Model(decoder_inputs, decoder_outputs, name="decoder")
 
@@ -64,12 +64,12 @@ def build_decoder_sz_flat():
 	latent = Concatenate(name="latent_concat")([s, z])
 
 	init_state = Dense(X_high_size, activation="tanh", name="hidden_state_init")(latent)
-	
+
 	out_X = []
 	for t in range(n_tracks):
 		h_X = RepeatVector(phrase_size, name=f"latent_repeat_{t}")(latent)
 		for l in range(X_high_depth):
-			h_X = CuDNNLSTM(
+			h_X = LSTM(
 				X_high_size,
 				return_sequences=True,
 				#activation="tanh",
@@ -81,7 +81,7 @@ def build_decoder_sz_flat():
 			name=f"ts_project_{t}"
 		)(h_X)
 		out_X.append(out_X_t)
-	
+
 	decoder_outputs = out_X
 	return Model(decoder_inputs, decoder_outputs, name="decoder")
 
@@ -93,7 +93,7 @@ def build_decoder_sz_hierarchical(self):
 	X_low_depth = self.decoder_params["X_low_depth"]
 	X_low_size  = self.decoder_params["X_low_size"]
 	n_embeddings = self.decoder_params["n_embeddings"]
-	
+
 	s = Input(shape=(self.s_length,), name="s")
 	z = Input(shape=(self.z_length,), name="z")
 	decoder_inputs = [s, z]
@@ -109,13 +109,13 @@ def build_decoder_sz_hierarchical(self):
 		h_X = RepeatVector(n_embeddings, name=f"latent_repeat_{t}")(latent)
 
 		for l in range(X_high_depth):
-			h_X = CuDNNLSTM(
+			h_X = LSTM(
 				X_high_size,
 				return_sequences=True,
 				#activation="tanh",
 				name=f"high_encoder_{t}_{l}"
 			)(h_X, initial_state=[init_state, init_state])
-			
+
 		out_X_t = TimeDistributed(
 			LowDecoder(
 				output_length=self.subphrase_size,

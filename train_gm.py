@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 from keras.layers import Concatenate, RepeatVector, TimeDistributed, Reshape, Permute
 from keras.layers import Add, Lambda, Flatten, BatchNormalization, Activation
-from keras.layers import Input, LSTM, Dense, GRU, Bidirectional, CuDNNLSTM
+from keras.layers import Input, LSTM, Dense, GRU, Bidirectional
 from keras.layers.merge import _Merge
 
 from keras.initializers import Zeros

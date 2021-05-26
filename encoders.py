@@ -1,6 +1,6 @@
 from keras.layers import Concatenate, RepeatVector, TimeDistributed, Reshape, Permute
 from keras.layers import Add, Lambda, Flatten, BatchNormalization, Activation
-from keras.layers import Input, LSTM, Dense, GRU, Bidirectional, CuDNNLSTM
+from keras.layers import Input, LSTM, Dense, GRU, Bidirectional
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.models import Model
@@ -18,18 +18,18 @@ def build_encoder_sz():
 
 	X = Input(shape=(phrase_size, n_cropped_notes, n_tracks), name="X")
 	encoder_inputs = X
-	
+
 	# X encoder
 	h_X = Reshape((phrase_size, n_tracks * n_cropped_notes), name="reshape_X")(X)
 	for l in range(X_depth - 1):
 		h_X = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
+			LSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
 			merge_mode="concat", name=f"bidirectional_X_{l}"
 		)(h_X)
 		#h_X = BatchNormalization(name=f"batchnorm_X_{l}")(h_X)
 
 	h = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
+			LSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
 			merge_mode="concat", name=f"bidirectional_X_{X_depth - 1}"
 		)(h_X)
 	#h = BatchNormalization(name=f"batchnorm_X_{X_depth}")(h_X)
@@ -46,7 +46,7 @@ def build_encoder_sz():
 		batch_size = K.shape(z_mean_)[0]
 		epsilon = K.random_normal(shape=(batch_size, z_length), mean=0., stddev=epsilon_std)
 		return z_mean_ + K.exp(z_log_var_ / 2) * epsilon
-	
+
 	z = Lambda(sampling, output_shape=(z_length,), name='z_sampling')([z_mean, z_log_var])
 
 	encoder_outputs = [s, z]
@@ -66,18 +66,18 @@ def build_encoder_z():
 
 	X = Input(shape=(phrase_size, n_cropped_notes, n_tracks), name="X")
 	encoder_inputs = X
-	
+
 	# X encoder
 	h_X = Reshape((phrase_size, n_tracks * n_cropped_notes), name="reshape_X")(X)
 	for l in range(X_depth - 1):
 		h_X = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
+			LSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
 			merge_mode="concat", name=f"bidirectional_X_{l}"
 		)(h_X)
 		#h_X = BatchNormalization(name=f"batchnorm_X_{l}")(h_X)
 
 	h = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
+			LSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
 			merge_mode="concat", name=f"bidirectional_X_{X_depth - 1}"
 		)(h_X)
 	#h = BatchNormalization(name=f"batchnorm_X_{X_depth}")(h_X)
@@ -94,7 +94,7 @@ def build_encoder_z():
 		batch_size = K.shape(z_mean_)[0]
 		epsilon = K.random_normal(shape=(batch_size, z_length), mean=0., stddev=epsilon_std)
 		return z_mean_ + K.exp(z_log_var_ / 2) * epsilon
-	
+
 	z = Lambda(sampling, output_shape=(z_length,), name='z_sampling')([z_mean, z_log_var])
 
 	encoder_outputs = z

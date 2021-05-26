@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, Concatenate, Reshape, Bidirectional, CuDNNLSTM
+from keras.layers import Input, Dense, Concatenate, Reshape, Bidirectional, LSTM
 from keras.models import Model
 
 import config
@@ -15,7 +15,7 @@ def build_gaussian_discriminator():
 	for l in range(fc_depth):
 		h = Dense(fc_size, activation="tanh", name=f"fc_{l}")(h)
 		#h = BatchNormalization(name=f"batchnorm_fc_{l}")(h)
-	
+
 	out = Dense(1, activation="linear", name="validity")(h)
 
 	return Model(z, out, name="z_discriminator")
@@ -81,13 +81,13 @@ def build_infomax_network():
 	h_X = Reshape((phrase_size, n_tracks * n_cropped_notes), name="reshape_X")(X)
 	for l in range(X_depth - 1):
 		h_X = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
+			LSTM(X_size, return_sequences=True, name=f"rec_X_{l}"),
 			merge_mode="concat", name=f"bidirectional_X_{l}"
 		)(h_X)
 		#h_X = BatchNormalization(name=f"batchnorm_X_{l}")(h_X)
 
 	h = Bidirectional(
-			CuDNNLSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
+			LSTM(X_size, return_sequences=False, name=f"rec_X_{X_depth - 1}"),
 			merge_mode="concat", name=f"bidirectional_X_{X_depth - 1}"
 		)(h_X)
 	#h = BatchNormalization(name=f"batchnorm_X_{X_depth}")(h_X)

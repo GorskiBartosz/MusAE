@@ -2,8 +2,8 @@ from __future__ import print_function, division
 
 from keras.layers import Concatenate, RepeatVector, TimeDistributed, Reshape, Permute
 from keras.layers import Add, Lambda, Flatten, BatchNormalization, Activation
-from keras.layers import Input, LSTM, Dense, GRU, Bidirectional, CuDNNLSTM
-from keras.layers.merge import _Merge
+from keras.layers import Input, LSTM, Dense, GRU, Bidirectional
+from keras.layers import Concatenate
 
 from keras.initializers import Zeros
 
@@ -13,8 +13,8 @@ from keras.models import load_model
 from keras.optimizers import RMSprop, Adam
 from functools import partial
 
-from keras.utils import print_summary, plot_model
-from keras.utils import to_categorical   
+from keras.utils import plot_model
+from keras.utils import to_categorical
 
 from keras import backend as K
 from keras.engine.topology import Layer
@@ -65,7 +65,7 @@ class MusAE():
 		self.decoder = decoders.build_decoder_sz_flat()
 
 		print("Initialising z discriminator...")
-		self.z_discriminator = discriminators.build_gaussian_discriminator()	
+		self.z_discriminator = discriminators.build_gaussian_discriminator()
 
 		print("Initialising s discriminator...")
 		self.s_discriminator = discriminators.build_bernoulli_discriminator()
@@ -132,7 +132,7 @@ class MusAE():
 			name="z_regularisation_phase"
 		)
 		plot_model(self.z_regularisation_phase, os.path.join(path, "z_regularisation_phase.png"), show_shapes=True)
-		
+
 		#-------------------------------
 		# Construct Computational Graph
 		#    for the s discriminator
@@ -215,12 +215,12 @@ class MusAE():
 		self.z_discriminator.trainable = False
 		self.s_discriminator.trainable = False
 		#self.infomax_net.trainable = True
-		
+
 		z_info = Input(shape=(self.z_length,), name="z_info")
 		s_info = Input(shape=(self.s_length,), name="s_info")
 
 		Y_drums_info, Y_bass_info, Y_guitar_info, Y_strings_info = self.decoder([s_info, z_info])
-		
+
 		Y = Concatenate(axis=-1, name="concat")([Y_drums_info, Y_bass_info, Y_guitar_info, Y_strings_info])
 
 		s_info_pred, _ = self.encoder(Y)
@@ -272,7 +272,7 @@ class MusAE():
 		# prepare gp losses
 		self.s_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=s_int)
 		self.s_gp_loss.__name__ = "gradient_penalty_s"
-		
+
 		self.z_gp_loss = partial(self.gradient_penalty_loss, averaged_samples=z_int)
 		self.z_gp_loss.__name__ = "gradient_penalty_z"
 
@@ -307,7 +307,7 @@ class MusAE():
 		ids = map(lambda gpu: int(gpu.entry['index']), stats)
 		ratios = map(lambda gpu: float(gpu.entry['memory.used']) / float(gpu.entry['memory.total']), stats)
 		bestGPU = min(zip(ids, ratios), key=lambda x: x[1])[0]
-	 
+
 		print("Setting GPU to: {}".format(bestGPU))
 		os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 		os.environ['CUDA_VISIBLE_DEVICES'] = str(bestGPU)
@@ -329,17 +329,17 @@ class MusAE():
 		return wrapper
 
 	def precision(self, y_true, y_pred):
-		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))  
-		# predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))  
-		# precision = true_positives / (predicted_positives + K.epsilon())    
+		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+		# predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+		# precision = true_positives / (predicted_positives + K.epsilon())
 		# return precision
 		precision = self.as_keras_metric(tf.metrics.precision)
 		return precision(y_true, y_pred)
 
 	def recall(self, y_true, y_pred):
-		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))  
-		# possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))   
-		# recall = true_positives / (possible_positives + K.epsilon())    
+		# true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+		# possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+		# recall = true_positives / (possible_positives + K.epsilon())
 		recall = self.as_keras_metric(tf.metrics.recall)
 		return recall(y_true, y_pred)
 
@@ -388,13 +388,13 @@ class MusAE():
 		for key in paths:
 			if not os.path.exists(paths[key]):
 				os.makedirs(paths[key])
-		
+
 		print("Splitting training set and validation set...")
 		batches_path = os.path.join(self.dataset_path, "batches", "X")
 
 		_, _, files = next(os.walk(batches_path))
 		self.len_dataset = len(files)
-		
+
 		tr_set, vl_set = train_test_split(files, test_size=self.test_size)
 		del files
 
@@ -425,7 +425,7 @@ class MusAE():
 			"infomax_loss": [],
 			"infomax_accuracy": []
 		}
-		
+
 		vl_log = {
 			"epoch": [],
 			# "AE_loss_drums": [],
@@ -483,7 +483,7 @@ class MusAE():
 			# train on the training set
 			for _ in range(self.len_tr_set):
 				bar.update(pbc)
-				
+
 				X, Y, label = tr_queue.get(block=True)
 				label = label[:, :self.s_length]
 
@@ -496,7 +496,7 @@ class MusAE():
 
 				# draw z from N(0,epsilon_std)
 				z_real = np.random.normal(0, epsilon_std, (n_chunks, self.z_length))
-				
+
 				# draw s from B(s_length)
 				# s is a k-hot vector of tags
 				s_real = np.random.binomial(1, 0.5, size=(n_chunks, self.s_length))
@@ -535,11 +535,11 @@ class MusAE():
 				tr_log["s_score_real"].append(aae_loss[29])
 				tr_log["s_score_fake"].append(aae_loss[32])
 				tr_log["s_gradient_penalty"].append(aae_loss[7])
-				
+
 				tr_log["z_score_real"].append(aae_loss[38])
 				tr_log["z_score_fake"].append(aae_loss[41])
 				tr_log["z_gradient_penalty"].append(aae_loss[10])
-				
+
 				tr_log["supervised_loss"].append(aae_loss[47])
 				tr_log["supervised_accuracy"].append(aae_loss[50])
 
@@ -605,7 +605,7 @@ class MusAE():
 				X, Y, label = vl_queue.get(block=True)
 				label = label[:, :self.s_length]
 				#print("batch get")
-				
+
 				n_chunks = X.shape[0]
 
 				# Adversarial ground truths (wasserstein)
@@ -615,11 +615,11 @@ class MusAE():
 
 				# draw z from N(0,epsilon_std)
 				z_real = np.random.normal(0, epsilon_std, (n_chunks, self.z_length))
-				
+
 				# draw s from B(s_length)
 				# s is a k-hot vector of tags
 				s_real = np.random.binomial(1, 0.5, size=(n_chunks, self.s_length))
-				
+
 				#Y_split = [ Y[:, :, : , t] for t in range(self.n_tracks) ]
 				Y_drums = Y[:, :, : , 0]
 				Y_bass = Y[:, :, : , 1]
@@ -657,7 +657,7 @@ class MusAE():
 
 			vl_log["VL_infomax_loss"].append(np.array(vl_log_tmp["VL_infomax_loss"]).mean())
 			vl_log["VL_infomax_accuracy"].append(np.array(vl_log_tmp["VL_infomax_accuracy"]).mean())
-			
+
 
 			with open(os.path.join(paths["plots"], "log.json"), 'w') as f:
 				json.dump(str(vl_log), f)
@@ -674,10 +674,9 @@ class MusAE():
 			plt.plot(xs, ys)
 			plt.xlabel('iteration')
 			plt.ylabel(key)
-			
+
 			plt.savefig(os.path.join(path, key))
 
 	def save_checkpoint(self, path, epoch):
 		self.encoder.save_weights(os.path.join(path, str(epoch) + "_MusAE_encoder.h5"))
 		self.decoder.save_weights(os.path.join(path, str(epoch) + "_MusAE_decoder.h5"))
-
