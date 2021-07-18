@@ -44,7 +44,7 @@ preprocessing_params = {
 }
 
 training_params = {
-    "batch_size": 32,
+    "batch_size": 16,
     "test_size": 0.2,
     "k_discriminator": 1,
     "n_epochs": 10,

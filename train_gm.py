@@ -45,6 +45,18 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 
+class MeanMetric(tf.keras.metrics.Metric):
+
+    def __init__(self, name='mean_metric', **kwargs):
+        super(MeanMetric, self).__init__(name=name, **kwargs)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        self.y_pred = y_pred
+
+    def result(self):
+        return K.mean(self.y_pred)
+
+
 class RandomWeightedAverage(Concatenate):
     def _merge_function(self, inputs):
         batch_size = K.shape(inputs[0])[0]
@@ -194,8 +206,7 @@ class MusAE_GM():
             ],
             optimizer=self.aae_optim,
             metrics=[
-                "categorical_accuracy",
-                self.output
+                "categorical_accuracy"
             ]
         )
         plot_model(self.adversarial_autoencoder, os.path.join(path, "adversarial_autoencoder.png"), show_shapes=True)
@@ -421,10 +432,10 @@ class MusAE_GM():
                 tr_log["AE_accuracy_tot"].append(
                     np.array([aae_loss[9], aae_loss[11], aae_loss[13], aae_loss[15]]).mean())
 
-                tr_log["z_score_real"].append(aae_loss[18])
-                tr_log["z_score_fake"].append(aae_loss[20])
-                tr_log["z_gradient_penalty"].append(aae_loss[22])
-                tr_log["gen_score"].append(aae_loss[24])
+                #tr_log["z_score_real"].append(aae_loss[18])
+                #tr_log["z_score_fake"].append(aae_loss[20])
+                #tr_log["z_gradient_penalty"].append(aae_loss[22])
+                #tr_log["gen_score"].append(aae_loss[24])
 
                 if pbc_tr % 500 == 0:
                     print("\nPlotting stats...")
